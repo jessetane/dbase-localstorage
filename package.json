@@ -1,7 +1,7 @@
 {
   "name": "dbase-localstorage",
   "version": "1.0.0",
-  "description": "A dbase compatible server backed by localStorage",
+  "description": "dbase compatible storage engine backed by localStorage",
   "keywords": [
     "dbase",
     "localStorage"
