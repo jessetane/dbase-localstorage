@@ -1,9 +1,9 @@
 {
-  "name": "dbase-localstorage",
+  "name": "hyperbase-localstorage",
   "version": "1.0.0",
-  "description": "dbase compatible storage engine backed by localStorage",
+  "description": "hyperbase compatible storage engine backed by localStorage",
   "keywords": [
-    "dbase",
+    "hyperbase",
     "localStorage"
   ],
   "scripts": {
@@ -16,14 +16,14 @@
   },
   "devDependencies": {
     "browserify": "^10.2.4",
-    "dbase": "jessetane/dbase",
+    "hyperbase": "jessetane/hyperbase",
     "standard": "^4.3.1",
     "tape": "^4.0.0",
     "zuul": "^3.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jessetane/livebase.git"
+    "url": "git+https://github.com/jessetane/hyperbase-localstorage.git"
   },
   "author": "jesse.tane@gmail.com",
   "license": "WTFPL"

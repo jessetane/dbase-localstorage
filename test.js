@@ -1,7 +1,7 @@
-var dbaseTest = require('dbase/test')
-var dbaseStorage = require('./')
+var hyperbaseTest = require('hyperbase/test')
+var hyperbaseStorage = require('./')
 
-var storage = dbaseStorage()
+var storage = hyperbaseStorage()
 var server = storage.Server()
 
-dbaseTest(server)
+hyperbaseTest(server)

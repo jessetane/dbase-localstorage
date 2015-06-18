@@ -1,12 +1,12 @@
-module.exports = DbaseLocalStorage
+module.exports = HyperbaseLocalStorage
 
 var queue = require('queue')
 var Server = require('./server')
 var StorageEvent = window.StorageEvent
 
-function DbaseLocalStorage (prefix) {
-  if (!(this instanceof DbaseLocalStorage)) {
-    return new DbaseLocalStorage(prefix)
+function HyperbaseLocalStorage (prefix) {
+  if (!(this instanceof HyperbaseLocalStorage)) {
+    return new HyperbaseLocalStorage(prefix)
   }
 
   this.prefix = prefix || ''
@@ -18,7 +18,7 @@ function DbaseLocalStorage (prefix) {
   window.addEventListener('storage', this._onstorage)
 }
 
-DbaseLocalStorage.prototype.Server = function () {
+HyperbaseLocalStorage.prototype.Server = function () {
   var id = (Math.random() + '').slice(2)
   if (this._clients[id]) {
     return this.Server()
@@ -28,7 +28,7 @@ DbaseLocalStorage.prototype.Server = function () {
   return client
 }
 
-DbaseLocalStorage.prototype.destroy = function () {
+HyperbaseLocalStorage.prototype.destroy = function () {
   for (var i in this._clients) {
     var client = this._clients[i]
     client.end()
@@ -37,7 +37,7 @@ DbaseLocalStorage.prototype.destroy = function () {
   window.removeEventListener('storage', this._onstorage)
 }
 
-DbaseLocalStorage.prototype.on = function (client, path, type, cbid) {
+HyperbaseLocalStorage.prototype.on = function (client, path, type, cbid) {
   var eventTypes = this._listeners[path] = this._listeners[path] || {}
   var clients = eventTypes[type] = eventTypes[type] || {}
   clients[client.id] = true
@@ -52,7 +52,7 @@ DbaseLocalStorage.prototype.on = function (client, path, type, cbid) {
   }
 }
 
-DbaseLocalStorage.prototype._oninitialValue = function (client, path, type, cbid, err, value) {
+HyperbaseLocalStorage.prototype._oninitialValue = function (client, path, type, cbid, err, value) {
   if (cbid) {
     client.send({
       name: 'cb',
@@ -71,7 +71,7 @@ DbaseLocalStorage.prototype._oninitialValue = function (client, path, type, cbid
   }
 }
 
-DbaseLocalStorage.prototype._oninitial = function (client, path, type, cbid) {
+HyperbaseLocalStorage.prototype._oninitial = function (client, path, type, cbid) {
   if (type === 'key_added') {
     var meta = window.localStorage[this.prefix + 'm://' + path]
     if (meta) meta = meta.split(',')
@@ -102,7 +102,7 @@ DbaseLocalStorage.prototype._oninitial = function (client, path, type, cbid) {
   }
 }
 
-DbaseLocalStorage.prototype.off = function (client, path, type) {
+HyperbaseLocalStorage.prototype.off = function (client, path, type) {
   var eventTypes = this._listeners[path]
   if (eventTypes) {
     var clients = eventTypes[type]
@@ -118,7 +118,7 @@ DbaseLocalStorage.prototype.off = function (client, path, type) {
   }
 }
 
-DbaseLocalStorage.prototype.update = function (client, path, newValue, cbid) {
+HyperbaseLocalStorage.prototype.update = function (client, path, newValue, cbid) {
   this._doupdate(path, newValue, function (err) {
     client.send({
       name: 'cb',
@@ -128,7 +128,7 @@ DbaseLocalStorage.prototype.update = function (client, path, newValue, cbid) {
   })
 }
 
-DbaseLocalStorage.prototype._doupdate = function (path, newValue, cb) {
+HyperbaseLocalStorage.prototype._doupdate = function (path, newValue, cb) {
   var metapath = this.prefix + 'm://' + path
   var valuepath = this.prefix + 'v://' + path
   var oldValue = window.localStorage[valuepath] || null
@@ -185,7 +185,7 @@ DbaseLocalStorage.prototype._doupdate = function (path, newValue, cb) {
   }
 }
 
-DbaseLocalStorage.prototype.remove = function (client, path, cbid) {
+HyperbaseLocalStorage.prototype.remove = function (client, path, cbid) {
   this._doremove(path, function (err) {
     client.send({
       name: 'cb',
@@ -195,7 +195,7 @@ DbaseLocalStorage.prototype.remove = function (client, path, cbid) {
   })
 }
 
-DbaseLocalStorage.prototype._doremove = function (path, cb) {
+HyperbaseLocalStorage.prototype._doremove = function (path, cb) {
   var self = this
   var metapath = this.prefix + 'm://' + path
   var valuepath = this.prefix + 'v://' + path
@@ -241,7 +241,7 @@ DbaseLocalStorage.prototype._doremove = function (path, cb) {
   })
 }
 
-DbaseLocalStorage.prototype._updateMeta = function (path, newValue, cb) {
+HyperbaseLocalStorage.prototype._updateMeta = function (path, newValue, cb) {
   var parentPath = getParentPath(path)
 
   if (path === parentPath) {
@@ -283,7 +283,7 @@ DbaseLocalStorage.prototype._updateMeta = function (path, newValue, cb) {
   }
 }
 
-DbaseLocalStorage.prototype._onstorage = function (evt) {
+HyperbaseLocalStorage.prototype._onstorage = function (evt) {
   if (!evt.key) return
 
   var eventTypes, clients
@@ -362,7 +362,7 @@ DbaseLocalStorage.prototype._onstorage = function (evt) {
   }
 }
 
-DbaseLocalStorage.prototype._handleValueEvent = function (path, numPending, clients) {
+HyperbaseLocalStorage.prototype._handleValueEvent = function (path, numPending, clients) {
   var self = this
   if (this._valueEventBuffer[path] === numPending) {
     delete this._valueEventBuffer[path]
@@ -380,7 +380,7 @@ DbaseLocalStorage.prototype._handleValueEvent = function (path, numPending, clie
   }
 }
 
-DbaseLocalStorage.prototype._readValue = function (path, cb) {
+HyperbaseLocalStorage.prototype._readValue = function (path, cb) {
   var value = window.localStorage[this.prefix + 'v://' + path]
   if (value) {
     return cb(null, JSON.parse(value))
