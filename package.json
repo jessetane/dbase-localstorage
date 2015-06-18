@@ -1,0 +1,30 @@
+{
+  "name": "dbase-localstorage",
+  "version": "1.0.0",
+  "description": "A dbase compatible server backed by localStorage",
+  "keywords": [
+    "dbase",
+    "localStorage"
+  ],
+  "scripts": {
+    "test": "standard && zuul --local --no-coverage -- test.js"
+  },
+  "dependencies": {
+    "inherits": "^2.0.1",
+    "queue": "^3.1.0",
+    "terminal-stream": "^1.0.0"
+  },
+  "devDependencies": {
+    "browserify": "^10.2.4",
+    "dbase": "jessetane/dbase",
+    "standard": "^4.3.1",
+    "tape": "^4.0.0",
+    "zuul": "^3.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jessetane/livebase.git"
+  },
+  "author": "jesse.tane@gmail.com",
+  "license": "WTFPL"
+}
