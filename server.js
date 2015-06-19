@@ -12,6 +12,10 @@ function Server (storage) {
 
   this.storage = storage
 
+  this.once('unpipe', function () {
+    this.end()
+  }.bind(this))
+
   TerminalStream.call(this, this.onmessage)
 }
 

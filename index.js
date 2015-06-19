@@ -24,7 +24,16 @@ HyperbaseLocalStorage.prototype.Server = function () {
     return this.Server()
   }
   var client = this._clients[id] = new Server(this)
+  client.listeners = {}
   client.id = id
+  client.once('end', function () {
+    for (var path in client.listeners) {
+      for (var type in client.listeners[path]) {
+        delete this._listeners[path][type][id]
+      }
+    }
+    delete this._clients[id]
+  }.bind(this))
   return client
 }
 
@@ -41,6 +50,9 @@ HyperbaseLocalStorage.prototype.on = function (client, path, type, cbid) {
   var eventTypes = this._listeners[path] = this._listeners[path] || {}
   var clients = eventTypes[type] = eventTypes[type] || {}
   clients[client.id] = true
+
+  eventTypes = client.listeners[path] = client.listeners[path] || {}
+  eventTypes[type] = true
 
   if (type === 'value') {
     this._readValue(path, function (err, value) {
@@ -96,6 +108,9 @@ HyperbaseLocalStorage.prototype.off = function (client, path, type, cbid) {
   if (eventTypes) {
     var clients = eventTypes[type]
     if (clients) {
+      if (clients[client.id]) {
+        delete this._clients[client.id].listeners[path][type]
+      }
       delete clients[client.id]
       if (Object.keys(clients).length === 0) {
         delete eventTypes[type]
@@ -363,7 +378,8 @@ HyperbaseLocalStorage.prototype._handleValueEvent = function (path, numPending, 
     this._readValue(path, function (err, value) {
       if (err) throw err
       for (var i in clients) {
-        self._clients[i].send({
+        var client = self._clients[i]
+        client && client.send({
           name: 'ev',
           type: 'value',
           path: path,
