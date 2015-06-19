@@ -7,7 +7,7 @@
     "localStorage"
   ],
   "scripts": {
-    "test": "standard && zuul --local --no-coverage -- test.js"
+    "test": "standard && zuul --local 12345 --no-coverage -- test.js"
   },
   "dependencies": {
     "inherits": "^2.0.1",
