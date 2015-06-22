@@ -1,6 +1,5 @@
 module.exports = HyperbaseLocalStorage
 
-var queue = require('queue')
 var Server = require('./server')
 var StorageEvent = window.StorageEvent
 
@@ -54,51 +53,40 @@ HyperbaseLocalStorage.prototype.on = function (client, path, type, cbid) {
   eventTypes = client.listeners[path] = client.listeners[path] || {}
   eventTypes[type] = true
 
-  if (type === 'value') {
-    this._readValue(path, function (err, value) {
-      if (cbid) {
-        client.send({
-          error: err ? err.message : err,
-          id: cbid
-        })
-      }
+  if (cbid) {
+    client.send({
+      id: cbid
+    })
+  }
 
-      if (!err) {
-        client.send({
-          method: 'event',
-          params: {
-            path: path,
-            type: type,
-            data: value
-          }
-        })
+  if (type === 'value') {
+    var value = this._readValue(path)
+
+    client.send({
+      method: 'event',
+      params: {
+        path: path,
+        type: type,
+        data: value
       }
     })
-  } else {
-    if (cbid) {
-      client.send({
-        id: cbid
-      })
+  } else if (type === 'key_added') {
+    var meta = window.localStorage[this.prefix + 'm://' + path]
+    if (meta) meta = parseMeta(meta)
+
+    var children = []
+    for (var key in meta) {
+      children.push(key)
     }
 
-    if (type === 'key_added') {
-      var meta = window.localStorage[this.prefix + 'm://' + path]
-      if (meta) meta = parseMeta(meta)
-
-      var children = []
-      for (var key in meta) {
-        children.push(key)
+    client.send({
+      method: 'event',
+      params: {
+        path: path,
+        type: type,
+        data: children
       }
-
-      client.send({
-        method: 'event',
-        params: {
-          path: path,
-          type: type,
-          data: children
-        }
-      })
-    }
+    })
   }
 }
 
@@ -127,85 +115,76 @@ HyperbaseLocalStorage.prototype.off = function (client, path, type, cbid) {
 }
 
 HyperbaseLocalStorage.prototype.update = function (client, path, newValue, cbid) {
-  this._doupdate(path, newValue, function (err) {
-    if (cbid) {
-      client.send({
-        id: cbid,
-        error: err ? err.message : err
-      })
-    }
-  })
+  this._doupdate(path, newValue)
+
+  if (cbid) {
+    client.send({
+      id: cbid
+    })
+  }
 }
 
-HyperbaseLocalStorage.prototype._doupdate = function (path, newValue, cb) {
+HyperbaseLocalStorage.prototype._doupdate = function (path, newValue) {
   var metapath = this.prefix + 'm://' + path
   var valuepath = this.prefix + 'v://' + path
   var oldValue = window.localStorage[valuepath] || null
   var key = null
-  var q = queue()
 
   if (typeof newValue === 'object' && newValue !== null) {
     if (oldValue) {
       delete window.localStorage[valuepath]
     }
 
-    q.push(this._updateMeta.bind(this, path, newValue))
+    this._updateMeta(path, newValue)
     for (key in newValue) {
-      q.push(this._doupdate.bind(this, getChildPath(path, key), newValue[key]))
+      this._doupdate(getChildPath(path, key), newValue[key])
     }
-    q.start(cb)
   } else {
     if (!oldValue) {
       var oldMeta = window.localStorage[metapath]
       if (oldMeta) {
         var children = parseMeta(oldMeta)
         for (key in children) {
-          q.push(this._doremove.bind(this, getChildPath(path, key)))
+          this._doremove(getChildPath(path, key))
         }
       }
     }
 
-    q.push(this._updateMeta.bind(this, path, newValue))
-    q.start(function (err) {
-      if (err) return cb(err)
+    this._updateMeta(path, newValue)
 
-      if (newValue === '' || newValue === null || newValue === undefined) {
-        newValue = null
+    if (newValue === '' || newValue === null || newValue === undefined) {
+      newValue = null
+    } else {
+      newValue = JSON.stringify(newValue)
+    }
+
+    if (oldValue !== newValue) {
+      if (!newValue) {
+        delete window.localStorage[valuepath]
       } else {
-        newValue = JSON.stringify(newValue)
+        window.localStorage[valuepath] = newValue
       }
 
-      if (oldValue !== newValue) {
-        if (!newValue) {
-          delete window.localStorage[valuepath]
-        } else {
-          window.localStorage[valuepath] = newValue
-        }
-
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: valuepath,
-          oldValue: oldValue,
-          newValue: newValue
-        }))
-      }
-
-      cb()
-    })
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: valuepath,
+        oldValue: oldValue,
+        newValue: newValue
+      }))
+    }
   }
 }
 
 HyperbaseLocalStorage.prototype.remove = function (client, path, cbid) {
-  this._doremove(path, function (err) {
-    if (cbid) {
-      client.send({
-        id: cbid,
-        error: err ? err.message : err
-      })
-    }
-  })
+  this._doremove(path)
+
+  if (cbid) {
+    client.send({
+      id: cbid
+    })
+  }
 }
 
-HyperbaseLocalStorage.prototype._doremove = function (path, cb) {
+HyperbaseLocalStorage.prototype._doremove = function (path) {
   var self = this
   var metapath = this.prefix + 'm://' + path
   var valuepath = this.prefix + 'v://' + path
@@ -213,44 +192,37 @@ HyperbaseLocalStorage.prototype._doremove = function (path, cb) {
   var value = window.localStorage[valuepath]
   var children = null
   var didupdate = false
-  var q = queue()
 
   if (meta) {
     children = parseMeta(meta)
-    for (var key in children) (function (key) {
-      q.push(self._doremove.bind(self, getChildPath(path, key)))
-      didupdate = true
-    })(key)
+    for (var key in children) {
+      this._doremove(getChildPath(path, key))
+    }
   } else if (value) {
     delete window.localStorage[valuepath]
     didupdate = true
   }
 
-  q.start(function (err) {
-    if (err) return cb(err)
-    if (didupdate) {
-      if (meta) {
-        delete window.localStorage[metapath]
-      } else {
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: valuepath,
-          oldValue: value,
-          newValue: null
-        }))
-      }
-
-      self._updateMeta(path, null, cb)
+  if (didupdate) {
+    if (meta) {
+      delete window.localStorage[metapath]
     } else {
-      cb && cb()
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: valuepath,
+        oldValue: value,
+        newValue: null
+      }))
     }
-  })
+
+    this._updateMeta(path)
+  }
 }
 
-HyperbaseLocalStorage.prototype._updateMeta = function (path, newValue, cb) {
+HyperbaseLocalStorage.prototype._updateMeta = function (path, newValue) {
   var parentPath = getParentPath(path)
 
   if (path === parentPath) {
-    return cb && cb()
+    return
   }
 
   var parentMetaPath = this.prefix + 'm://' + parentPath
@@ -282,9 +254,7 @@ HyperbaseLocalStorage.prototype._updateMeta = function (path, newValue, cb) {
       newValue: children
     }))
 
-    this._updateMeta(parentPath, children, cb)
-  } else {
-    cb && cb()
+    this._updateMeta(parentPath, children)
   }
 }
 
@@ -375,52 +345,36 @@ HyperbaseLocalStorage.prototype._handleValueEvent = function (path, numPending, 
   var self = this
   if (this._valueEventBuffer[path] === numPending) {
     delete this._valueEventBuffer[path]
-    this._readValue(path, function (err, value) {
-      if (err) throw err
-      for (var i in clients) {
-        var client = self._clients[i]
-        client && client.send({
-          method: 'event',
-          params: {
-            type: 'value',
-            path: path,
-            data: value
-          }
-        })
-      }
-    })
+    var value = this._readValue(path)
+    for (var i in clients) {
+      var client = self._clients[i]
+      client && client.send({
+        method: 'event',
+        params: {
+          type: 'value',
+          path: path,
+          data: value
+        }
+      })
+    }
   }
 }
 
-HyperbaseLocalStorage.prototype._readValue = function (path, cb) {
+HyperbaseLocalStorage.prototype._readValue = function (path) {
   var value = window.localStorage[this.prefix + 'v://' + path]
   if (value) {
-    return cb(null, JSON.parse(value))
+    value = JSON.parse(value)
   } else {
     var meta = window.localStorage[this.prefix + 'm://' + path]
     if (meta) {
       meta = parseMeta(meta)
       value = {}
-      var self = this
-      var q = queue()
-
-      for (var key in meta) (function (key) {
-        q.push(function (cb) {
-          self._readValue(getChildPath(path, key), function (err, subValue) {
-            if (err) return cb(err)
-            value[key] = subValue
-            cb()
-          })
-        })
-      })(key)
-
-      q.start(function (err) {
-        cb(err, value)
-      })
-    } else {
-      cb()
+      for (var key in meta) {
+        value[key] = this._readValue(getChildPath(path, key))
+      }
     }
   }
+  return value
 }
 
 function parseMeta (meta) {
