@@ -1,6 +1,6 @@
 {
   "name": "hyperbase-localstorage",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "hyperbase compatible storage engine backed by localStorage",
   "keywords": [
     "hyperbase",
@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "browserify": "^10.2.4",
-    "hyperbase": "jessetane/hyperbase",
+    "hyperbase": "^1.2.0",
     "standard": "^4.3.1",
     "tape": "^4.0.0",
     "zuul": "^3.0.0"
