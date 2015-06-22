@@ -58,48 +58,47 @@ HyperbaseLocalStorage.prototype.on = function (client, path, type, cbid) {
     this._readValue(path, function (err, value) {
       if (cbid) {
         client.send({
-          name: 'cb',
-          id: cbid,
-          body: err ? err.message : err
+          error: err ? err.message : err,
+          id: cbid
         })
       }
 
       if (!err) {
         client.send({
-          name: 'ev',
-          path: path,
-          type: type,
-          body: value
+          method: 'event',
+          params: {
+            path: path,
+            type: type,
+            data: value
+          }
         })
       }
     })
-  } else if (type === 'key_added') {
-    var meta = window.localStorage[this.prefix + 'm://' + path]
-    if (meta) meta = parseMeta(meta)
-
-    var children = []
-    for (var key in meta) {
-      children.push(key)
-    }
-
+  } else {
     if (cbid) {
       client.send({
-        name: 'cb',
         id: cbid
       })
     }
 
-    client.send({
-      name: 'ev',
-      path: path,
-      type: type,
-      body: children
-    })
-  } else if (cbid) {
-    client.send({
-      name: 'cb',
-      id: cbid
-    })
+    if (type === 'key_added') {
+      var meta = window.localStorage[this.prefix + 'm://' + path]
+      if (meta) meta = parseMeta(meta)
+
+      var children = []
+      for (var key in meta) {
+        children.push(key)
+      }
+
+      client.send({
+        method: 'event',
+        params: {
+          path: path,
+          type: type,
+          data: children
+        }
+      })
+    }
   }
 }
 
@@ -122,7 +121,6 @@ HyperbaseLocalStorage.prototype.off = function (client, path, type, cbid) {
   }
   if (cbid) {
     client.send({
-      name: 'cb',
       id: cbid
     })
   }
@@ -132,9 +130,8 @@ HyperbaseLocalStorage.prototype.update = function (client, path, newValue, cbid)
   this._doupdate(path, newValue, function (err) {
     if (cbid) {
       client.send({
-        name: 'cb',
         id: cbid,
-        body: err ? err.message : err
+        error: err ? err.message : err
       })
     }
   })
@@ -201,9 +198,8 @@ HyperbaseLocalStorage.prototype.remove = function (client, path, cbid) {
   this._doremove(path, function (err) {
     if (cbid) {
       client.send({
-        name: 'cb',
         id: cbid,
-        body: err ? err.message : err
+        error: err ? err.message : err
       })
     }
   })
@@ -328,10 +324,12 @@ HyperbaseLocalStorage.prototype._onstorage = function (evt) {
       }
       for (n in clients) {
         this._clients[n].send({
-          name: 'ev',
-          type: 'key_removed',
-          path: path,
-          body: removed
+          method: 'event',
+          params: {
+            type: 'key_removed',
+            path: path,
+            data: removed
+          }
         })
       }
     }
@@ -346,10 +344,12 @@ HyperbaseLocalStorage.prototype._onstorage = function (evt) {
       }
       for (n in clients) {
         this._clients[n].send({
-          name: 'ev',
-          type: 'key_added',
-          path: path,
-          body: added
+          method: 'event',
+          params: {
+            type: 'key_added',
+            path: path,
+            data: added
+          }
         })
       }
     }
@@ -380,10 +380,12 @@ HyperbaseLocalStorage.prototype._handleValueEvent = function (path, numPending, 
       for (var i in clients) {
         var client = self._clients[i]
         client && client.send({
-          name: 'ev',
-          type: 'value',
-          path: path,
-          body: value
+          method: 'event',
+          params: {
+            type: 'value',
+            path: path,
+            data: value
+          }
         })
       }
     })

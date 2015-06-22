@@ -26,18 +26,18 @@ Server.prototype.send = function (message) {
 Server.prototype.onmessage = function (message) {
   message = JSON.parse(message)
 
-  switch (message.name) {
+  switch (message.method) {
     case 'on':
-      this.storage.on(this, message.path, message.type, message.cb)
+      this.storage.on(this, message.params.path, message.params.type, message.id)
       break
     case 'off':
-      this.storage.off(this, message.path, message.type, message.cb)
+      this.storage.off(this, message.params.path, message.params.type, message.id)
       break
     case 'update':
-      this.storage.update(this, message.path, message.body, message.cb)
+      this.storage.update(this, message.params.path, message.params.data, message.id)
       break
     case 'remove':
-      this.storage.remove(this, message.path, message.cb)
+      this.storage.remove(this, message.params.path, message.id)
       break
   }
 }
